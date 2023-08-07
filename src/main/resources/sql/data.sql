@@ -1,0 +1,9 @@
+-- INSERT INTO users(username, password, enabled)
+-- VALUES ('user', '{noop}1234', true),
+--        ('admin1', '{noop}1234', true),
+--        ('admin2', '{noop}1234', true);
+--
+-- INSERT INTO authorities(username, authority)
+-- VALUES ('user', 'ROLE_USER'),
+--        ('admin1', 'ROLE_ADMIN'),
+--        ('admin2', 'ROLE_ADMIN');

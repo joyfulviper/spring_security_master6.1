@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: spring security 01
+  thymeleaf:
+    cache: true
+  messages:
+    basename: i18n/message
+    encoding: UTF-8
+    cache-duration: PT1H
+  session:
+    store-type: jdbc
+    jdbc:
+      initialize-schema: never
+  security:
+    user:
+      name: user
+      password: 1234
+      roles: USER
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: "jdbc:h2:file:./database/spring_security.db;MODE=MYSQL;DB_CLOSE_DELAY=-1"
+    username: sa
+    password:
+    hikari:
+      minimum-idle: 1
+      maximum-pool-size: 5
+      pool-name: H2_DB
+      driver-class-name: org.h2.Driver
+  sql:
+    init:
+      platform: h2
+      mode: never
+      schema-locations: classpath:sql/schema_new.sql, classpath:org/springframework/session/jdbc/schema-h2.sql
+      data-locations: classpath:sql/data_new.sql
+      encoding: utf-8
+
+  jpa:
+    database: h2
+    open-in-view: false
+    show-sql: false
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+
+server:
+  port: 443
+  ssl:
+    enabled: true
+    key-alias: prgrms_keystore
+    key-store: classpath:prgrms_keystore.p12
+    key-store-password: prgrms123
+    key-password: prgrms123
+    trust-store: classpath:prgrms_truststore.p12
+    trust-store-password: prgrms123
