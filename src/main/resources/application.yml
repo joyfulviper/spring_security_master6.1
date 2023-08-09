@@ -7,10 +7,6 @@ spring:
     basename: i18n/message
     encoding: UTF-8
     cache-duration: PT1H
-  session:
-    store-type: jdbc
-    jdbc:
-      initialize-schema: never
   security:
     user:
       name: user
@@ -22,7 +18,7 @@ spring:
       path: /h2-console
   datasource:
     driver-class-name: org.h2.Driver
-    url: "jdbc:h2:file:./database/spring_security.db;MODE=MYSQL;DB_CLOSE_DELAY=-1"
+    url: "jdbc:h2:mem:spring_securityMODE=MYSQL;DB_CLOSE_DELAY=-1"
     username: sa
     password:
     hikari:
@@ -33,8 +29,7 @@ spring:
   sql:
     init:
       platform: h2
-      mode: never
-      schema-locations: classpath:sql/schema_new.sql, classpath:org/springframework/session/jdbc/schema-h2.sql
+      schema-locations: classpath:sql/schema_new.sql
       data-locations: classpath:sql/data_new.sql
       encoding: utf-8
 
@@ -47,18 +42,12 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
+jwt:
+  header: token
+  issuer: prgrms
+  client-secret: EENY5W0eegTf1naQB2eDeyCLl5kRS2b8xa5c4qLdS0hmVjtbvo8tOyhPMcAmtPuQ
+  expiry-seconds: 60
 
 logging:
   level:
     org.hibernate.SQL: DEBUG
-
-server:
-  port: 443
-  ssl:
-    enabled: true
-    key-alias: prgrms_keystore
-    key-store: classpath:prgrms_keystore.p12
-    key-store-password: prgrms123
-    key-password: prgrms123
-    trust-store: classpath:prgrms_truststore.p12
-    trust-store-password: prgrms123

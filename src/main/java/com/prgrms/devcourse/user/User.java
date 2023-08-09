@@ -1,6 +1,8 @@
 package com.prgrms.devcourse.user;
 
 import jakarta.persistence.*;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Entity
 @Table(name = "users")
@@ -16,9 +18,15 @@ public class User {
     @Column(name = "passwd")
     private String password;
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "group_id")
     private Group group;
+
+    public void checkPassword(PasswordEncoder passwordEncoder, String credentials) {
+        if (!passwordEncoder.matches(credentials, password)) {
+            throw new IllegalArgumentException("Bad credentials");
+        }
+    }
 
     public Long getId() {
         return id;

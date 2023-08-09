@@ -29,7 +29,7 @@ public class Group {
         return name;
     }
 
-    public List<SimpleGrantedAuthority> getAuthorities() {
+    public List<? extends GrantedAuthority> getAuthorities() {
         return permissions.stream()
                 .map(gp -> new SimpleGrantedAuthority(gp.getPermission().getName()))
                 .toList();

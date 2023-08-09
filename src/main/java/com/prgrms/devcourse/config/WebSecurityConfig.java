@@ -1,5 +1,9 @@
 package com.prgrms.devcourse.config;
 
+import com.prgrms.devcourse.jwt.Jwt;
+import com.prgrms.devcourse.jwt.JwtAuthenticationFilter;
+import com.prgrms.devcourse.jwt.JwtAuthenticationProvider;
+import com.prgrms.devcourse.jwt.JwtAuthenticationToken;
 import com.prgrms.devcourse.user.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -8,32 +12,31 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.authorization.AuthorizationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.jdbc.JdbcDaoImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.security.web.context.SecurityContextPersistenceFilter;
 
-import javax.sql.DataSource;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
-import static org.springframework.security.authorization.AuthenticatedAuthorizationManager.fullyAuthenticated;
-import static org.springframework.security.authorization.AuthorityAuthorizationManager.hasRole;
-import static org.springframework.security.authorization.AuthorizationManagers.allOf;
 import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 
 @Configuration
@@ -42,10 +45,22 @@ public class WebSecurityConfig {
 
     private static final Logger log = LoggerFactory.getLogger(WebSecurityConfig.class);
 
-    private final UserService userService;
+    private final JwtConfigure jwtConfigure;
 
-    public WebSecurityConfig(UserService userService) {
-        this.userService = userService;
+    public WebSecurityConfig(JwtConfigure jwtConfigure) {
+        this.jwtConfigure = jwtConfigure;
+    }
+
+    @Bean
+    Jwt jwt() {
+        return new Jwt(jwtConfigure.getIssuer(),
+                jwtConfigure.getClientSecret(),
+                jwtConfigure.getExpirySeconds());
+    }
+
+    @Bean
+    JwtAuthenticationProvider jwtAuthenticationProvider(Jwt jwt, UserService userService) {
+        return new JwtAuthenticationProvider(jwt, userService);
     }
 
     @Bean
@@ -58,12 +73,18 @@ public class WebSecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /*@Bean
-    UserDetailsService userDetailsService(DataSource dataSource) {
-        var jdbcDao = new JdbcDaoImpl();
-        jdbcDao.setDataSource(dataSource);
-        return jdbcDao;
-    }*/
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtConfigure.getHeader(), jwt());
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(HttpSecurity http, UserService userService) throws Exception {
+        AuthenticationManagerBuilder authenticationManagerBuilder =
+                http.getSharedObject(AuthenticationManagerBuilder.class);
+        authenticationManagerBuilder.authenticationProvider(jwtAuthenticationProvider(jwt(), userService));
+        return authenticationManagerBuilder.build();
+    }
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -72,78 +93,23 @@ public class WebSecurityConfig {
          * spring security user 추가
          */
 
-        AuthenticationManagerBuilder auth = http.getSharedObject(AuthenticationManagerBuilder.class);
-        auth.userDetailsService(userService);
-
-//        AuthenticationManagerBuilder auth = http.getSharedObject(AuthenticationManagerBuilder.class);
-//        auth.inMemoryAuthentication().
-//                withUser("user").password("{noop}1234").roles("USER")
-//                .and()
-//                .withUser("admin1").password("{noop}1234").roles("ADMIN")
-//                .and()
-//                .withUser("admin2").password("{noop}1234").roles("ADMIN");
-
         http
-                /**
-                 * 권한 추가
-                 */
                 .authorizeHttpRequests((authorize) -> authorize
-                        .requestMatchers(antMatcher("/assets/**"), antMatcher("/h2-console/**"))
-                        .permitAll()
-                        .requestMatchers(antMatcher("/me")).access(new HierarchyBasedAuthorizationManager(roleHierarchy()))//hasAnyRole("USER", "ADMIN")
-                        .requestMatchers(antMatcher("/admin")).access(allOf(hasRole("ADMIN"), fullyAuthenticated(), new CustomAuthorizationManager()))
+                        .requestMatchers(antMatcher("/api/users/m2")).access(new HierarchyBasedAuthorizationManager(roleHierarchy()))
                         .anyRequest().permitAll())
-                /**
-                 * 로그인 추가
-                 */
-                .formLogin((formLogin) -> formLogin
-                        .defaultSuccessUrl("/")
-                        .usernameParameter("username")
-                        .passwordParameter("password")//html 로그인 페이지에 username, pawssword에 해당하는 파라미터 값(아이디랑 비밀번호)
-                        .permitAll()
-                )
-                /**
-                 * 로그아웃 추가
-                 */
-                .logout((logout) -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/")
-                        .invalidateHttpSession(true)
-                        .clearAuthentication(true)
-                        .deleteCookies("remember-me")
-                )
-                /**
-                 * 아이디 비번 쿠키 기반 기억하기
-                 */
-                .rememberMe((rememberMe) -> rememberMe
-                        .key("my-remember-me")
-                        .rememberMeParameter("remember-me")//html 로그인 페이지에 name에 해당하는 파라미터 값
-                        .tokenValiditySeconds(300))// 쿠키 기반
-                /**
-                 * http 요청을 https로 리다이렉트
-                 * ChannelProcessingFilter
-                 */
-                .requiresChannel((requiresChannel) -> requiresChannel
-                        .anyRequest().requiresSecure()
-                )
-                /**
-                 * 익명 사용자 추가
-                 * AnonymousAuthenticationFilter
-                 */
-                .anonymous((anonymous) -> anonymous
-                        .principal("thisIsAnonymousUser")
-                        .authorities("ROLE_ANONYMOUS", "ROLE_UNKNOWN")
+                .csrf(AbstractHttpConfigurer::disable)
+                .headers(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .rememberMe(AbstractHttpConfigurer::disable)
+                .logout(AbstractHttpConfigurer::disable)
+                .sessionManagement((sessionManagement) -> sessionManagement
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .exceptionHandling((exceptionHandling) -> exceptionHandling
                         .accessDeniedHandler(accessDeniedHandler())
                 )
-                .sessionManagement((sessionManagement -> sessionManagement
-                        .sessionFixation().changeSessionId()
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                        .invalidSessionUrl("/")
-                        .maximumSessions(1)
-                        .maxSessionsPreventsLogin(false)
-                ));
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }// 이것도 마찬가지로 변경 됏음. 과거 사용했던 메소드 밑에 현재 버전에 맞는 메소드가 있음.
 
