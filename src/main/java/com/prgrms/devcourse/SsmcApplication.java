@@ -11,5 +11,4 @@ public class SsmcApplication {
     public static void main(String[] args) {
         SpringApplication.run(SsmcApplication.class, args);
     }
-
 }

@@ -1,0 +1,6 @@
+2023-08-11 02:19:18 jdbc[4]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "SPRING_SESSIPERMISSIONS" not found; SQL statement:
+SELECT * FROM SPRING_SESSIPERMISSIONS ON_ATTRIBUTES [42102-214]
+2023-08-11 02:19:25 jdbc[4]: exception
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "[*]USERS"; expected "UPDATE, USE"; SQL statement:
+USERS [42001-214]

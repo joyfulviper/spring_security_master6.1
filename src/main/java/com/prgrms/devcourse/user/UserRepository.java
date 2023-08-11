@@ -7,6 +7,9 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
-    @Query("SELECT u FROM User u JOIN FETCH u.group g JOIN FETCH g.permissions gp JOIN FETCH gp.permission WHERE u.loginId = :loginId")
-    Optional<User> findByLoginIdWithAuthorities(@Param("loginId") String loginId);
+    @Query("select u from User u join fetch u.group g left join fetch g.permissions gp join fetch gp.permission where u.username = :username")
+    Optional<User> findByUsername(String username);
+
+    @Query("select u from User u join fetch u.group g left join fetch g.permissions gp join fetch gp.permission where u.provider = :provider and u.providerId = :providerId")
+    Optional<User> findByProviderAndProviderId(String provider, String providerId);
 }
